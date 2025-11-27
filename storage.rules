@@ -1,0 +1,41 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return isAuthenticated() && 
+             firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Price submission images
+    match /priceSubmissions/{userId}/{allPaths=**} {
+      // Users can upload their own images
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+      // Everyone can read verified submission images
+      allow read: if true;
+    }
+    
+    // Product images
+    match /products/{allPaths=**} {
+      // Everyone can read product images
+      allow read: if true;
+      // Only admins can upload product images
+      allow write: if isAdmin();
+    }
+    
+    // User avatars
+    match /avatars/{userId}/{allPaths=**} {
+      // Users can upload their own avatars
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+      // Everyone can read avatars
+      allow read: if true;
+    }
+  }
+}
+
